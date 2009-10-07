@@ -22,7 +22,7 @@
 /* convert buffers */
 #define INBUF_SZ 512
 #define OUTBUF_SZ INBUF_SZ*4
-static char inbuf[INBUF_SZ];
+/*static char inbuf[INBUF_SZ];*/
 static char outbuf[OUTBUF_SZ];
 
 
@@ -195,9 +195,9 @@ static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
     return;
 }
 
-static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, int ileft)
+static void iv_conv(t_iconvdrv *iv, iconv_t cd, const char *ip, size_t ileft)
 {
-    int oleft=OUTBUF_SZ;
+    size_t oleft=OUTBUF_SZ;
     char *op;
     int len;
     ErlDrvBinary *bin;
