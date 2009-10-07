@@ -39,11 +39,11 @@ open(To, From) ->
     gen_server:call(?SERVER, {open, l2b(To), l2b(From)}, infinity).
 
 %%conv(Cd, String) -> {ok, l2b(String)};
-conv(Cd, String) when binary(Cd) ->
+conv(Cd, String) when is_binary(Cd) ->
     gen_server:call(?SERVER, {conv, Cd, l2b(String)}, infinity).
 
 %%close(Cd) -> ok;
-close(Cd) when binary(Cd) ->
+close(Cd) when is_binary(Cd) ->
     gen_server:call(?SERVER, {close, Cd}, infinity).
 
 %%%----------------------------------------------------------------------
@@ -59,10 +59,26 @@ close(Cd) when binary(Cd) ->
 %%----------------------------------------------------------------------
 init([]) ->
     erl_ddll:start(),
-    Path = code:priv_dir(iconv),
-    erl_ddll:load_driver(Path, ?DRV_NAME),
-    Port = open_port({spawn, ?DRV_NAME}, [binary]),
-    {ok, #state{port = Port}}.
+    Path = case code:priv_dir(iconv) of
+			{error, _} ->
+				case load_path(?DRV_NAME++".so") of
+					{error, _} ->
+						error;
+					{ok, P} ->
+						P
+				end;
+			P ->
+				P
+		end,
+
+		case Path of
+			error ->
+				{stop, no_driver};
+			Path ->
+				erl_ddll:load_driver(Path, ?DRV_NAME),
+				Port = open_port({spawn, ?DRV_NAME}, [binary]),
+				{ok, #state{port = Port}}
+		end.
 
 %%----------------------------------------------------------------------
 %% Func: handle_call/3
@@ -74,21 +90,21 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_call({open, To, From}, _, S) ->
-    ToLen   = size(To),
-    FromLen = size(From),
+    ToLen   = byte_size(To),
+    FromLen = byte_size(From),
     Msg = <<?IV_OPEN,ToLen:16,To/binary,FromLen:16,From/binary>>,
     Reply = call_drv(S#state.port, Msg),
     {reply, Reply, S};
 %%
 handle_call({conv, Cd, Buf}, _, S) ->
-    CdLen  = size(Cd),
-    BufLen = size(Buf),
+    CdLen  = byte_size(Cd),
+    BufLen = byte_size(Buf),
     Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,Buf/binary>>,
     Reply = call_drv(S#state.port, Msg),
     {reply, Reply, S};
 %%
 handle_call({close, Cd}, _, S) ->
-    CdLen  = size(Cd),
+    CdLen  = byte_size(Cd),
     Msg = <<?IV_CLOSE,CdLen:16,Cd/binary>>,
     Reply = call_drv(S#state.port, Msg),
     {reply, Reply, S}.
@@ -144,19 +160,19 @@ code_change(_, _, _) ->
 %%%----------------------------------------------------------------------
 
 load_path(File) ->
-    case lists:zf(fun(Ebin) ->
-			  Priv = Ebin ++ "/../priv/",
-			  case file:read_file_info(Priv ++ File) of
-			      {ok, _} -> {true, Priv};
-			      _ -> false
-			  end
-		  end, code:get_path()) of
-        [Dir|_] ->
-            {ok, Dir};
-        [] ->
-            error_logger:format("Error: ~s not found in code path\n", [File]),
-            {error, enoent}
-    end.
+	case lists:zf(fun(Ebin) ->
+					Priv = Ebin ++ "/../priv/",
+					case file:read_file_info(Priv ++ File) of
+						{ok, _} -> {true, Priv};
+						_ -> false
+					end
+			end, code:get_path()) of
+		[Dir|_] ->
+			{ok, Dir};
+		[] ->
+			error_logger:format("Error: ~s not found in code path\n", [File]),
+			{error, enoent}
+	end.
 
-l2b(L) when list(L)   -> list_to_binary(L);
-l2b(B) when binary(B) -> B.
+l2b(L) when is_list(L)   -> list_to_binary(L);
+l2b(B) when is_binary(B) -> B.
