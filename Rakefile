@@ -24,7 +24,11 @@ end
 
 ROOTDIR = `erl -noshell -eval 'io:format("~n~s~n", [code:root_dir()]).' -s erlang halt | tail -n 1`.chomp
 
-C_FLAGS = "-Wall -Werror -I#{ROOTDIR}/usr/include -liconv -fpic"
+C_FLAGS = "-Wall -Werror -I#{ROOTDIR}/usr/include -fpic"
+
+if ENV['iconv']
+	C_FLAGS += " -I#{ENV['iconv']}/include -L#{ENV['iconv']}/lib -liconv"
+end
 
 INCLUDE = "include"
 
@@ -112,7 +116,7 @@ rule ".rel" => ["%{ebin,src}X.rel.src"] do |t|
 end
 
 rule ".so" => ["%{priv,c_src}X.c"] + C_HEADERS do |t|
-	sh "gcc -shared -L/usr/local/lib #{C_FLAGS} -I/usr/local/include #{t.source} -o #{t.to_s}"
+	sh "gcc -shared #{C_FLAGS} #{t.source} -o #{t.to_s}"
 end
 
 rule ".txt" => ["%{coverage,debug_ebin}X.beam"] do |t|
