@@ -8,7 +8,7 @@
 %%% $Id$
 %%%----------------------------------------------------------------------
 -behaviour(gen_server).
--export([start/0, start_link/0, stop/0, open/2, conv/2, close/1]).
+-export([start/0, start_link/0, stop/0, open/2, conv/2, conv_chunked/2, close/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -25,6 +25,7 @@
 -define(IV_CONV,    $v).
 -define(IV_CLOSE,   $c).
 
+-define(INBUF_SZ, 512).
 
 -define(DRV_NAME, "iconv_drv").
 -define(SERVER, ?MODULE).
@@ -48,6 +49,9 @@ open(To, From) ->
 %%conv(Cd, String) -> {ok, l2b(String)};
 conv(Cd, String) when is_binary(Cd) ->
     gen_server:call(?SERVER, {conv, Cd, l2b(String)}, infinity).
+
+conv_chunked(Cd, String) when is_binary(Cd) ->
+	gen_server:call(?SERVER, {conv_chunked, Cd, l2b(String)}, infinity).
 
 %%close(Cd) -> ok;
 close(Cd) when is_binary(Cd) ->
@@ -114,6 +118,11 @@ handle_call({conv, Cd, Buf}, _, S) ->
     Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,Buf/binary>>,
     Reply = call_drv(S#state.port, Msg),
     {reply, Reply, S};
+
+handle_call({conv_chunked, Cd, Buf}, _, S) ->
+	Reply = conv_chunked(Cd, Buf, [], S),
+	{reply, Reply, S};
+
 %%
 handle_call({close, Cd}, _, S) ->
     CdLen  = byte_size(Cd),
@@ -173,6 +182,47 @@ code_change(_, _, _) ->
 %%%----------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------
+
+conv_chunked(_Cd, <<>>, Acc, S) ->
+	io:format("done~m"),
+	{ok, list_to_binary(lists:reverse(Acc))};
+conv_chunked(Cd, <<String:?INBUF_SZ/binary, Tail/binary>>, Acc, S) ->
+	io:format("loop~n"),
+	io:format("string: ~w~n", [String]),
+	CdLen  = byte_size(Cd),
+	BufLen = byte_size(String),
+	Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,String/binary>>,
+	case call_drv(S#state.port, Msg) of
+		{ok, Result} ->
+			conv_chunked(Cd, Tail, [Result | Acc], S);
+		{error, einval} when Acc =/= [] -> % we chopped across a multibyte
+			io:format("invalid multibyte sequence, backing off one character and trying again~n"),
+			<<String2:(?INBUF_SZ-1)/binary, Tail2/binary>> = String,
+
+			BufLen2 = BufLen -1,
+			Msg2 = <<?IV_CONV,CdLen:16,Cd/binary,BufLen2:16,String2/binary>>,
+			
+			case call_drv(S#state.port, Msg2) of
+				{ok, Result} ->
+					conv_chunked(Cd, list_to_binary([Tail2, Tail]), [Result | Acc], S);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{error, Reason} ->
+			{error, Reason}
+	end;
+conv_chunked(Cd, String, Acc, S) ->
+	io:format("last run~n"),
+	CdLen  = byte_size(Cd),
+	BufLen = byte_size(String),
+	Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,String/binary>>,
+	case call_drv(S#state.port, Msg) of
+		{ok, Result} ->
+			io:format("done~n"),
+			{ok, list_to_binary(lists:reverse([Result | Acc]))};
+		{error, Reason} ->
+			{error, Reason}
+	end.
 
 load_path(File) ->
 	case lists:zf(fun(Ebin) ->
