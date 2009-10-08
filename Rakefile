@@ -25,7 +25,7 @@ end
 ROOTDIR = `erl -noshell -eval 'io:format("~n~s~n", [code:root_dir()]).' -s erlang halt | tail -n 1`.chomp
 
 if RUBY_PLATFORM =~ /darwin/
-	C_FLAGS= "-dynamiclib -Wall -Wl,-undefined,dynamic_lookup -fPIC -I#{ROOTDIR}/usr/include"
+	C_FLAGS= "-fno-common -Wall -Wl,-bundle-undefined,dynamic_lookup -fPIC -I#{ROOTDIR}/usr/include"
 else
 	C_FLAGS = "-shared -Wall -I#{ROOTDIR}/usr/include -fPIC"
 end

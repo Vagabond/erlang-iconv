@@ -75,7 +75,7 @@ init([]) ->
 			error ->
 				{stop, no_driver};
 			Path ->
-				erl_ddll:load_driver(Path, ?DRV_NAME),
+				ok = erl_ddll:load_driver(Path, ?DRV_NAME),
 				Port = open_port({spawn, ?DRV_NAME}, [binary]),
 				{ok, #state{port = Port}}
 		end.
