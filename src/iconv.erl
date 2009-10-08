@@ -184,11 +184,11 @@ code_change(_, _, _) ->
 %%%----------------------------------------------------------------------
 
 conv_chunked(_Cd, <<>>, Acc, S) ->
-	io:format("done~m"),
+	%io:format("done~m"),
 	{ok, list_to_binary(lists:reverse(Acc))};
 conv_chunked(Cd, <<String:?INBUF_SZ/binary, Tail/binary>>, Acc, S) ->
-	io:format("loop~n"),
-	io:format("string: ~w~n", [String]),
+	%io:format("loop~n"),
+	%io:format("string: ~w~n", [String]),
 	CdLen  = byte_size(Cd),
 	BufLen = byte_size(String),
 	Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,String/binary>>,
@@ -196,7 +196,7 @@ conv_chunked(Cd, <<String:?INBUF_SZ/binary, Tail/binary>>, Acc, S) ->
 		{ok, Result} ->
 			conv_chunked(Cd, Tail, [Result | Acc], S);
 		{error, einval} when Acc =/= [] -> % we chopped across a multibyte
-			io:format("invalid multibyte sequence, backing off one character and trying again~n"),
+			%io:format("invalid multibyte sequence, backing off one character and trying again~n"),
 			<<String2:(?INBUF_SZ-1)/binary, Tail2/binary>> = String,
 
 			BufLen2 = BufLen -1,
@@ -212,13 +212,13 @@ conv_chunked(Cd, <<String:?INBUF_SZ/binary, Tail/binary>>, Acc, S) ->
 			{error, Reason}
 	end;
 conv_chunked(Cd, String, Acc, S) ->
-	io:format("last run~n"),
+	%io:format("last run~n"),
 	CdLen  = byte_size(Cd),
 	BufLen = byte_size(String),
 	Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,String/binary>>,
 	case call_drv(S#state.port, Msg) of
 		{ok, Result} ->
-			io:format("done~n"),
+			%io:format("done~n"),
 			{ok, list_to_binary(lists:reverse([Result | Acc]))};
 		{error, Reason} ->
 			{error, Reason}
