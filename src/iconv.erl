@@ -195,7 +195,7 @@ conv_chunked(Cd, <<String:?INBUF_SZ/binary, Tail/binary>>, Acc, S) ->
 	case call_drv(S#state.port, Msg) of
 		{ok, Result} ->
 			conv_chunked(Cd, Tail, [Result | Acc], S);
-		{error, einval} when Acc =/= [] -> % we chopped across a multibyte
+		{error, einval} -> % we chopped across a multibyte
 			%io:format("invalid multibyte sequence, backing off one character and trying again~n"),
 			<<String2:(?INBUF_SZ-1)/binary, Tail2/binary>> = String,
 
