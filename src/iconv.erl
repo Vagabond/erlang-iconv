@@ -75,9 +75,14 @@ init([]) ->
 			error ->
 				{stop, no_driver};
 			Path ->
-				ok = erl_ddll:load_driver(Path, ?DRV_NAME),
-				Port = open_port({spawn, ?DRV_NAME}, [binary]),
-				{ok, #state{port = Port}}
+				case erl_ddll:load_driver(Path, ?DRV_NAME) of
+					ok ->
+						Port = open_port({spawn, ?DRV_NAME}, [binary]),
+						{ok, #state{port = Port}};
+					{error, Error} ->
+						error_logger:format("Error loading driver: ~p~n", [erl_ddll:format_error(Error)]),
+						{stop, bad_driver}
+				end
 		end.
 
 %%----------------------------------------------------------------------
