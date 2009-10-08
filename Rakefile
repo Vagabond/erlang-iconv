@@ -166,6 +166,11 @@ task :compile => [:contrib, 'ebin', 'priv'] + HEADERS + OBJ + ['priv/iconv_drv.s
 	end
 end
 
+task :install => [:compile] do
+	sh "mkdir #{ROOTDIR}/lib/iconv-1.0" unless File.directory? "#{ROOTDIR}/lib/iconv-1.0"
+	sh "cp -r src ebin c_src priv #{ROOTDIR}/lib/iconv-1.0"
+end
+
 task :contrib do
 	CONTRIB.each do |cont|
 		if File.exists? File.join(cont, 'Makefile')
@@ -197,7 +202,7 @@ end
 
 namespace :test do
 	desc "Compile .beam files with -DEUNIT and +debug_info => debug_ebin"
-	task :compile => [:contrib, 'debug_ebin'] + HEADERS + DEBUGOBJ
+	task :compile => [:contrib, 'debug_ebin'] + HEADERS + DEBUGOBJ + ['priv/iconv_drv.so']
 
 	task :contrib do
 		CONTRIB.each do |cont|

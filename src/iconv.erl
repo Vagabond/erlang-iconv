@@ -8,13 +8,17 @@
 %%% $Id$
 %%%----------------------------------------------------------------------
 -behaviour(gen_server).
--export([start/0, start_link/0, open/2, conv/2, close/1]).
+-export([start/0, start_link/0, stop/0, open/2, conv/2, close/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
 	 terminate/2, code_change/3]).
 
 -record(state, {port}).
+
+-ifdef(EUNIT).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%% op codes
 -define(IV_OPEN,    $o).
@@ -33,6 +37,9 @@ start() ->
 
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+stop() ->
+	gen_server:call(?SERVER, stop).
 
 %%open(To, From) -> {ok, ballen};
 open(To, From) ->
@@ -80,7 +87,7 @@ init([]) ->
 						Port = open_port({spawn, ?DRV_NAME}, [binary]),
 						{ok, #state{port = Port}};
 					{error, Error} ->
-						error_logger:format("Error loading driver: ~p~n", [erl_ddll:format_error(Error)]),
+						error_logger:format("Error loading driver: " ++ erl_ddll:format_error(Error), []),
 						{stop, bad_driver}
 				end
 		end.
@@ -112,7 +119,10 @@ handle_call({close, Cd}, _, S) ->
     CdLen  = byte_size(Cd),
     Msg = <<?IV_CLOSE,CdLen:16,Cd/binary>>,
     Reply = call_drv(S#state.port, Msg),
-    {reply, Reply, S}.
+    {reply, Reply, S};
+
+handle_call(stop, _, S) ->
+	{stop, normal, ok,  S}.
 
 call_drv(Port, Msg) ->
     erlang:port_command(Port, [Msg]),
@@ -181,3 +191,27 @@ load_path(File) ->
 
 l2b(L) when is_list(L)   -> list_to_binary(L);
 l2b(B) when is_binary(B) -> B.
+
+-ifdef(EUNIT).
+
+smtp_session_test_() ->
+	{setup,
+		fun() ->
+				iconv:start()
+		end,
+		fun(_) ->
+				iconv:stop()
+		end,
+		[
+			{"Convert from latin-1 to utf-8",
+				fun() ->
+						{ok, CD} = iconv:open("utf-8", "ISO-8859-1"),
+						?assertEqual({ok, <<"hello world">>}, iconv:conv(CD, "hello world")),
+						iconv:close(CD)
+				end
+			}
+		]
+	}.
+
+
+			-endif.
