@@ -195,7 +195,7 @@ static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
     return;
 }
 
-static void iv_conv(t_iconvdrv *iv, iconv_t cd, const char *ip, size_t ileft)
+static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft)
 {
     size_t oleft=OUTBUF_SZ;
     char *op;
