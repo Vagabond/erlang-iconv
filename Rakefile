@@ -24,14 +24,16 @@ end
 
 ROOTDIR = `erl -noshell -eval 'io:format("~n~s~n", [code:root_dir()]).' -s erlang halt | tail -n 1`.chomp
 
-if RUBY_PLATFORM =~ /darwin/
-	C_FLAGS= "-fno-common -Wall -Wl,-bundle,-undefined,dynamic_lookup -fPIC -I#{ROOTDIR}/usr/include"
+if RUBY_PLATFORM =~ /darwin/i
+	$C_FLAGS= "-fno-common -liconv -Wall -Wl,-bundle,-undefined,dynamic_lookup -fPIC -I#{ROOTDIR}/usr/include"
+elsif RUBY_PLATFORM =~ /linux/i or RUBY_PLATFORM =~ /netbsd/i
+	$C_FLAGS = "-shared -Wall -I#{ROOTDIR}/usr/include -fPIC"
 else
-	C_FLAGS = "-shared -Wall -I#{ROOTDIR}/usr/include -fPIC"
+	$C_FLAGS = "-shared -Wall -I#{ROOTDIR}/usr/include -fPIC -liconv"
 end
 
 if ENV['iconv']
-	C_FLAGS += " -I#{ENV['iconv']}/include -L#{ENV['iconv']}/lib -liconv"
+	$C_FLAGS += " -I#{ENV['iconv']}/include -L#{ENV['iconv']}/lib"
 end
 
 INCLUDE = "include"
@@ -120,7 +122,7 @@ rule ".rel" => ["%{ebin,src}X.rel.src"] do |t|
 end
 
 rule ".so" => ["%{priv,c_src}X.c"] + C_HEADERS do |t|
-	sh "gcc #{C_FLAGS} #{t.source} -o #{t.to_s}"
+	sh "gcc #{$C_FLAGS} #{t.source} -o #{t.to_s}"
 end
 
 rule ".txt" => ["%{coverage,debug_ebin}X.beam"] do |t|
