@@ -55,4 +55,22 @@ ok
 
 As you can see, before we passed it through iconv it was an unprintable mess.
 
+Installation
+============
 
+To install, use rake:
+
+<pre>
+rake
+sudo rake install
+</pre>
+
+If the compilation of the C part fails with errors about iconv, you have to
+specify the prefix where iconv is located, for example on FreeBSD:
+
+<pre>
+rake iconv=/usr/local
+</pre>
+
+And if you don't have iconv or it's development header installed (and iconv
+isn't part of your C libary) install it.
