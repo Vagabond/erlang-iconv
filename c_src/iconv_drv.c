@@ -181,13 +181,22 @@ static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
     }
     else {
 	len = sizeof(iconv_t);
-	if (!(bin = driver_alloc_binary(len))) {
+	if (!(bin = driver_alloc_binary(len+1))) {
             iconv_close(cd);
 	    driver_send_error(iv, &am_enomem);
 	}
 	else {
 	    memcpy(bin->orig_bytes, &cd, len);
-	    driver_send_bin(iv, bin, len);
+			if (!strcasecmp(tocode + strlen(tocode) -6, "IGNORE")) {
+				/* GLIBC's iconv is annoying and will throw the failure code for
+				 * invalid sequences even though we specify //IGNORE so we have to
+				 * keep track if we initalized this conversion handle with //IGNORE
+				 * or not so we can disregard the error. */
+				bin->orig_bytes[len] = 1;
+			} else {
+				bin->orig_bytes[len] = 0;
+			}
+	    driver_send_bin(iv, bin, len+1);
 	    driver_free_binary(bin);
 	}
     }
@@ -195,7 +204,7 @@ static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
     return;
 }
 
-static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft)
+static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ignore)
 {
     size_t oleft=OUTBUF_SZ;
     char *op;
@@ -207,7 +216,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft)
     /* Reset cd to initial state */
     iconv(cd, NULL, NULL, NULL, NULL);
 
-    if (iconv(cd, &ip, &ileft, &op, &oleft) == (size_t) -1) {
+    if (iconv(cd, &ip, &ileft, &op, &oleft) == (size_t) -1 && !(ignore && errno == EILSEQ)) {
 	if (errno == EILSEQ) 
 	    driver_send_error(iv, &am_eilseq);
 	else if (errno == EINVAL) 
@@ -242,6 +251,7 @@ static void iv_close(t_iconvdrv *iv, iconv_t cd)
 static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 {
     t_iconvdrv *iv = (t_iconvdrv *) drv_data;
+    char ignore = 0;
     char tocode[CODE_STR_SZ], fromcode[CODE_STR_SZ];
     char *bp=buf;
     unsigned int i=0;
@@ -275,12 +285,13 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 	 */
 	i = get_int16(bp);
 	bp += 2;
-	memcpy(&cd, bp, i);
+	memcpy(&cd, bp, i-1);
+	memcpy(&ignore, bp + i -1, 1);
 	bp += i;
 	i = get_int16(bp);
 	bp += 2;
 
-	iv_conv(iv, cd, bp, i);
+	iv_conv(iv, cd, bp, i, ignore);
 	break;
     }
 
