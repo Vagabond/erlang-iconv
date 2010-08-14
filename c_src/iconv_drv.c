@@ -301,7 +301,7 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 	 */
 	i = get_int16(bp);
 	bp += 2;
-	memcpy(&cd, bp, i-1);
+	memcpy(&cd, bp, i);
 
 	iv_close(iv, cd);
 	break;
