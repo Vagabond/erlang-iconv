@@ -281,7 +281,7 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 
     case IV_CONV: {
 	/*
-	 * Format: <cd-len:16><cd><buf-len:16><buf>
+	 * Format: <cd-len:16><cd><ignore><buf-len:16><buf>
 	 */
 	i = get_int16(bp);
 	bp += 2;
@@ -297,11 +297,11 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 
     case IV_CLOSE: {
 	/*
-	 * Format: <cd-len:16><cd>
+	 * Format: <cd-len:16><cd><ignore>
 	 */
 	i = get_int16(bp);
 	bp += 2;
-	memcpy(&cd, bp, i);
+	memcpy(&cd, bp, i - 1);
 
 	iv_close(iv, cd);
 	break;
