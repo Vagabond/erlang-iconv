@@ -23,7 +23,7 @@
 #define INBUF_SZ 512
 #define OUTBUF_SZ INBUF_SZ*4
 /*static char inbuf[INBUF_SZ];*/
-static char outbuf[OUTBUF_SZ];
+//static char outbuf[OUTBUF_SZ];
 
 
 /* these should really be defined in driver.h */
@@ -206,37 +206,64 @@ static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
 
 static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ignore)
 {
-    size_t oleft=OUTBUF_SZ;
-    char *op;
-    int len;
+    size_t oleft=ileft;
+    char *op, *buf;
+    int olen = ileft + 1;
     ErlDrvBinary *bin;
 
-    op = &outbuf[0];
+    /* malloc enough for the input size +1 (null terminated),
+     * with the assumption that the output length will be close to the input
+     * length. This isn't always the case, but we realloc on E2BIG below. */
+    buf = malloc(olen);
+
+    if (!buf) {
+	driver_send_error(iv, &am_enomem);
+	return;
+    }
+
+    op = buf;
 
     /* Reset cd to initial state */
     iconv(cd, NULL, NULL, NULL, NULL);
 
-    if (iconv(cd, &ip, &ileft, &op, &oleft) == (size_t) -1 && !(ignore && errno == EILSEQ)) {
-	if (errno == EILSEQ) 
+    while (iconv(cd, &ip, &ileft, &op, &oleft) == (size_t) -1 &&
+	   !(ignore && errno == EILSEQ)) {
+	if (errno == EILSEQ) {
 	    driver_send_error(iv, &am_eilseq);
-	else if (errno == EINVAL) 
+	} else if (errno == EINVAL) {
 	    driver_send_error(iv, &am_einval);
-	else if (errno == E2BIG) 
-	    driver_send_error(iv, &am_e2big);
-	else 
+	} else if (errno == E2BIG) {
+	    char *newbuf;
+	    /* allocate as much additional space as iconv says we need */
+	    newbuf = realloc(buf, olen + ileft + oleft);
+	    if (!newbuf) {
+		free(buf); /* realloc failed, make sure we free the old buffer*/
+		driver_send_error(iv, &am_enomem);
+		return;
+	    }
+	    buf = newbuf;
+	    op = buf + (olen - oleft);
+	    olen += ileft + oleft;
+	    oleft += ileft;
+	    /* keep going */
+	    continue;
+	} else {
 	    driver_send_error(iv, &am_unknown);
-    }
-    else if (ileft == 0) {
-	len = OUTBUF_SZ - oleft;
-	if (!(bin = driver_alloc_binary(len))) {
-	    driver_send_error(iv, &am_enomem);
 	}
-	else {
-	    memcpy(bin->orig_bytes, &outbuf[0], len);
-	    driver_send_bin(iv, bin, len);
+	return;
+    }
+
+    if (ileft == 0) {
+	if (!(bin = driver_alloc_binary(olen))) {
+	    driver_send_error(iv, &am_enomem);
+	} else {
+	    memcpy(bin->orig_bytes, buf, olen);
+	    driver_send_bin(iv, bin, olen);
 	    driver_free_binary(bin);
 	}
     }
+
+    free(buf);
 
     return;
 }
