@@ -254,6 +254,8 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
     }
 
     if (ileft == 0) {
+	/* find the length of the result, minus the terminating NULL */
+	olen = strlen(buf);
 	if (!(bin = driver_alloc_binary(olen))) {
 	    driver_send_error(iv, &am_enomem);
 	} else {
