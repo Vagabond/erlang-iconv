@@ -16,7 +16,7 @@
 
 -record(state, {port}).
 
--ifdef(EUNIT).
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
@@ -193,7 +193,7 @@ load_path(File) ->
 l2b(L) when is_list(L)   -> list_to_binary(L);
 l2b(B) when is_binary(B) -> B.
 
--ifdef(EUNIT).
+-ifdef(TEST).
 
 smtp_session_test_() ->
 	{setup,

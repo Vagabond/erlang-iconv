@@ -96,7 +96,7 @@ rule ".beam" => ["%{ebin,src}X.erl"] + HEADERS do |t|
 end
 
 rule ".beam" => ["%{debug_ebin,src}X.erl"] + HEADERS do |t|
-	sh "erlc +debug_info -D EUNIT -pa debug_ebin -W #{ERLC_FLAGS} -o debug_ebin #{t.source} "
+	sh "erlc +debug_info -D TEST -pa debug_ebin -W #{ERLC_FLAGS} -o debug_ebin #{t.source} "
 end
 
 rule ".rel" => ["%{ebin,src}X.rel.src"] do |t|
@@ -203,7 +203,7 @@ task :doc do
 end
 
 namespace :test do
-	desc "Compile .beam files with -DEUNIT and +debug_info => debug_ebin"
+	desc "Compile .beam files with -DTEST and +debug_info => debug_ebin"
 	task :compile => [:contrib, 'debug_ebin'] + HEADERS + DEBUGOBJ + ['priv/iconv_drv.so']
 
 	task :contrib do
@@ -295,7 +295,7 @@ namespace :test do
 		# Add -DEUNIT=1 here to make dialyzer evaluate the code in the test cases. This generates some spurious warnings so 
 		# it's not set normally but it can be very helpful occasionally.
 		dialyzer_flags = ""
-		dialyzer_flags += " -DEUNIT=1" if ENV['dialyzer_debug']
+		dialyzer_flags += " -DTEST=1" if ENV['dialyzer_debug']
 		dialyzer_flags += " -Wunderspecs" if ENV['dialyzer_underspecced']
 		contribfiles = Dir['contrib**/*.erl'].join(' ')
 		dialyzer_output = `dialyzer -D#{OTPVERSION}=1 #{dialyzer_flags} --src -I include -c #{SRC.join(' ')} #{contribfiles}`
