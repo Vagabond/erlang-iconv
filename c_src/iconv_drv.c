@@ -242,7 +242,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 		return;
 	    }
 	    buf = newbuf;
-	    op = buf + (olen - oleft);
+	    op = buf + (olen - oleft - 1);
 	    olen += ileft + oleft;
 	    oleft += ileft;
 	    /* keep going */
@@ -252,6 +252,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	}
 	return;
     }
+    *(op++) = 0; /* ensure we null terminate */
 
     if (ileft == 0) {
 	/* find the length of the result, minus the terminating NULL */
