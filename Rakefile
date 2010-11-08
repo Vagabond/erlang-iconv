@@ -169,8 +169,8 @@ task :compile => [:contrib, 'ebin', 'priv'] + HEADERS + OBJ + ['priv/iconv_drv.s
 end
 
 task :install => [:compile] do
-	sh "mkdir #{ROOTDIR}/lib/iconv-1.0" unless File.directory? "#{ROOTDIR}/lib/iconv-1.0"
-	sh "cp -r src ebin c_src priv #{ROOTDIR}/lib/iconv-1.0"
+	sh "mkdir #{ROOTDIR}/lib/iconv-1.0.1" unless File.directory? "#{ROOTDIR}/lib/iconv-1.0.1"
+	sh "cp -r src ebin c_src priv #{ROOTDIR}/lib/iconv-1.0.1"
 end
 
 task :contrib do
