@@ -76,6 +76,11 @@
   ((vec)[(i)+1] = (size)), \
   (i+2))
 
+/*
+ * R15B changed several driver callbacks to use ErlDrvSizeT and
+ * ErlDrvSSizeT typedefs instead of int.
+ * This provides missing typedefs on older OTP versions.
+ */
 #if ERL_DRV_EXTENDED_MAJOR_VERSION < 2
 typedef int ErlDrvSizeT;
 typedef int ErlDrvSSizeT;
@@ -344,7 +349,7 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, ErlDrvSSizeT le
 
     } /* switch */
 
-    return ;
+    return;
 }
     
 
@@ -372,7 +377,8 @@ DRIVER_INIT(iconvdrv)
   iconvdrv_driver_entry.driver_name     = "iconv_drv";
   iconvdrv_driver_entry.finish          = NULL;
   iconvdrv_driver_entry.outputv         = NULL;
-  iconvdrv_driver_entry.ready_async     = NULL;
+/* Added in Erlang/OTP R15B: */
+  iconvdrv_driver_entry.ready_async     = NULL; 
   iconvdrv_driver_entry.flush           = NULL;
   iconvdrv_driver_entry.call            = NULL;
   iconvdrv_driver_entry.event           = NULL;
