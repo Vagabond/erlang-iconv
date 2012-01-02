@@ -76,6 +76,11 @@
   ((vec)[(i)+1] = (size)), \
   (i+2))
 
+#if ERL_DRV_EXTENDED_MAJOR_VERSION < 2
+typedef int ErlDrvSizeT;
+typedef int ErlDrvSSizeT;
+#endif
+
 static int driver_send_bin();
 
 /* atoms which are sent to erlang */
@@ -115,7 +120,7 @@ static void iconvdrv_stop(ErlDrvData drv_data)
 
 
 /* send {P, value, Bin} to caller */
-static int driver_send_bin(t_iconvdrv *iv, ErlDrvBinary *bin, int len)
+static ErlDrvSSizeT driver_send_bin(t_iconvdrv *iv, ErlDrvBinary *bin, ErlDrvSizeT len)
 {
     int i = 0;
     ErlDrvTermData to, spec[10];
@@ -131,7 +136,7 @@ static int driver_send_bin(t_iconvdrv *iv, ErlDrvBinary *bin, int len)
 }
 
 /* send {P, ok} to caller */
-static int driver_send_ok(t_iconvdrv *iv)
+static ErlDrvSSizeT driver_send_ok(t_iconvdrv *iv)
 {
     int i = 0;
     ErlDrvTermData to, spec[10];
@@ -146,7 +151,7 @@ static int driver_send_ok(t_iconvdrv *iv)
 }
 
 /* send {P, error, Error} to caller */
-static int driver_send_error(t_iconvdrv *iv, ErlDrvTermData *am)
+static ErlDrvSSizeT driver_send_error(t_iconvdrv *iv, ErlDrvTermData *am)
 {
     int i = 0;
     ErlDrvTermData to, spec[8];
@@ -278,7 +283,7 @@ static void iv_close(t_iconvdrv *iv, iconv_t cd)
     return;
 }
 
-static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
+static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, ErlDrvSSizeT len)
 {
     t_iconvdrv *iv = (t_iconvdrv *) drv_data;
     char ignore = 0;
@@ -339,7 +344,7 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, int len)
 
     } /* switch */
 
-    return;
+    return ;
 }
     
 
@@ -358,14 +363,25 @@ DRIVER_INIT(iconvdrv)
   am_e2big        = driver_mk_atom("e2big");
   am_unknown      = driver_mk_atom("unknown");
 
-  iconvdrv_driver_entry.init         = NULL;   /* Not used */
-  iconvdrv_driver_entry.start        = iconvdrv_start;
-  iconvdrv_driver_entry.stop         = iconvdrv_stop;
-  iconvdrv_driver_entry.output       = iconvdrv_from_erlang;
-  iconvdrv_driver_entry.ready_input  = NULL;
-  iconvdrv_driver_entry.ready_output = NULL;
-  iconvdrv_driver_entry.driver_name  = "iconv_drv";
-  iconvdrv_driver_entry.finish       = NULL;
-  iconvdrv_driver_entry.outputv      = NULL;
+  iconvdrv_driver_entry.init            = NULL;   /* Not used */
+  iconvdrv_driver_entry.start           = iconvdrv_start;
+  iconvdrv_driver_entry.stop            = iconvdrv_stop;
+  iconvdrv_driver_entry.output          = iconvdrv_from_erlang;
+  iconvdrv_driver_entry.ready_input     = NULL;
+  iconvdrv_driver_entry.ready_output    = NULL;
+  iconvdrv_driver_entry.driver_name     = "iconv_drv";
+  iconvdrv_driver_entry.finish          = NULL;
+  iconvdrv_driver_entry.outputv         = NULL;
+  iconvdrv_driver_entry.ready_async     = NULL;
+  iconvdrv_driver_entry.flush           = NULL;
+  iconvdrv_driver_entry.call            = NULL;
+  iconvdrv_driver_entry.event           = NULL;
+  iconvdrv_driver_entry.extended_marker = ERL_DRV_EXTENDED_MARKER;
+  iconvdrv_driver_entry.major_version   = ERL_DRV_EXTENDED_MAJOR_VERSION;
+  iconvdrv_driver_entry.minor_version   = ERL_DRV_EXTENDED_MINOR_VERSION;
+  iconvdrv_driver_entry.driver_flags    = 0;
+  iconvdrv_driver_entry.handle2         = NULL;
+  iconvdrv_driver_entry.process_exit    = NULL;
+  iconvdrv_driver_entry.stop_select     = NULL;
   return &iconvdrv_driver_entry;
 }
