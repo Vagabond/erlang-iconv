@@ -243,7 +243,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	    }
 	    buf = newbuf;
 	    op = buf + (olen - oleft - 1);
-	    olen += ileft + oleft;
+	    olen += ileft;
 	    oleft += ileft;
 	    /* keep going */
 	    continue;
