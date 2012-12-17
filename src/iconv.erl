@@ -192,27 +192,3 @@ load_path(File) ->
 
 l2b(L) when is_list(L)   -> list_to_binary(L);
 l2b(B) when is_binary(B) -> B.
-
--ifdef(TEST).
-
-smtp_session_test_() ->
-	{setup,
-		fun() ->
-				iconv:start()
-		end,
-		fun(_) ->
-				iconv:stop()
-		end,
-		[
-			{"Convert from latin-1 to utf-8",
-				fun() ->
-						{ok, CD} = iconv:open("utf-8", "ISO-8859-1"),
-						?assertEqual({ok, <<"hello world">>}, iconv:conv(CD, "hello world")),
-						iconv:close(CD)
-				end
-			}
-		]
-	}.
-
-
-			-endif.
