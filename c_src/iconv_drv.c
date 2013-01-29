@@ -86,7 +86,7 @@ typedef int ErlDrvSizeT;
 typedef int ErlDrvSSizeT;
 #endif
 
-static int driver_send_bin();
+static ErlDrvSSizeT driver_send_bin();
 
 /* atoms which are sent to erlang */
 static ErlDrvTermData am_ok;
