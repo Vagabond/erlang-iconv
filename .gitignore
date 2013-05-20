@@ -1,0 +1,10 @@
+*.beam
+*.app
+*.dump
+*.o
+*.so
+
+*.bak
+*~
+
+/.eunit
