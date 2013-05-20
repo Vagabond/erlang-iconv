@@ -85,14 +85,16 @@ utf8_to_latin1(CD, S) ->
     ?assertEqual({ok, Out}, iconv:conv(CD, In)).
 
 roundtrip(CS) ->
-    Bytes = lists:seq(0,255),
+    IllegalBytes = illegal_bytes_for_encoding(CS),
+    Bytes = lists:seq(0,255) -- IllegalBytes,
     TestStrings =
         %% All zero-, one-, and two-byte sequences:
         [<<>>] ++
         [<<X>> || X <- Bytes] ++
         [<<X,Y>> || X <- Bytes, Y <- Bytes] ++
         %% Random input:
-        [crypto:rand_bytes(X) || X <- lists:seq(1,200)],
+        [bytes_not_in(crypto:rand_bytes(X), IllegalBytes)
+         || X <- lists:seq(1,200)],
 
     io:format(user, "using ~p test strings\n", [length(TestStrings)]),
     {ok, CD1} = iconv:open("utf-8", CS),
@@ -104,6 +106,17 @@ roundtrip(CS) ->
 roundtrip(CD1, CD2, In) ->
     {ok, Tmp} = iconv:conv(CD1, In),
     ?assertEqual({ok, In}, iconv:conv(CD2, Tmp)).
+
+bytes_not_in(Bin, Exclude) ->
+    << <<X>> || <<X>> <= Bin, not lists:member(X,Exclude)>>.
+
+illegal_bytes_for_encoding("ISO-8859-3") -> [165,174,190,195,208,227,240];
+illegal_bytes_for_encoding("ISO-8859-6") -> lists:seq(161,163)++lists:seq(165,171)++lists:seq(174,186)++lists:seq(188,190)++[192]++lists:seq(219,223)++lists:seq(243,255);
+illegal_bytes_for_encoding("ISO-8859-7") -> [174,210,255];
+illegal_bytes_for_encoding("ISO-8859-8") -> [161]++lists:seq(191,222)++[251,252,255];
+illegal_bytes_for_encoding("ISO-8859-11") -> lists:seq(219,222)++lists:seq(252,255);
+illegal_bytes_for_encoding(_) -> [].
+
 
 bigtest() ->
     {ok, CD} = iconv:open("latin1", "utf-8"),
