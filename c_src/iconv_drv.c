@@ -244,8 +244,9 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	    driver_send_error(iv, &am_einval);
 	} else if (errno == E2BIG) {
 	    char *newbuf;
+            int newolen = olen + ileft + oleft;
 	    /* allocate as much additional space as iconv says we need */
-	    newbuf = realloc(buf, olen + ileft + oleft);
+	    newbuf = realloc(buf, newolen);
 	    if (!newbuf) {
 		free(buf); /* realloc failed, make sure we free the old buffer*/
 		driver_send_error(iv, &am_enomem);
@@ -253,8 +254,8 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	    }
 	    op = newbuf + (op - buf);
 	    buf = newbuf;
-	    olen += ileft + oleft;
-	    oleft += ileft;
+	    olen = newolen;
+	    oleft = olen - (op - buf);
 	    /* keep going */
 	    continue;
 	} else {
