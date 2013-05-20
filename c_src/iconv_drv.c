@@ -251,8 +251,8 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 		driver_send_error(iv, &am_enomem);
 		return;
 	    }
+	    op = newbuf + (op - buf);
 	    buf = newbuf;
-	    op = buf + (olen - oleft - 1);
 	    olen += ileft + oleft;
 	    oleft += ileft;
 	    /* keep going */
