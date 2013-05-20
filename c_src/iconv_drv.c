@@ -218,10 +218,10 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 {
     size_t oleft=ileft;
     char *op, *buf;
-    int olen = ileft + 1;
+    int olen = ileft;
     ErlDrvBinary *bin;
 
-    /* malloc enough for the input size +1 (null terminated),
+    /* malloc enough for the input size,
      * with the assumption that the output length will be close to the input
      * length. This isn't always the case, but we realloc on E2BIG below. */
     buf = malloc(olen);
@@ -263,11 +263,10 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	}
 	return;
     }
-    *(op++) = 0; /* ensure we null terminate */
 
     if (ileft == 0) {
-	/* find the length of the result, minus the terminating NULL */
-	olen = strlen(buf);
+	/* find the length of the result */
+	olen = op - buf;
 	if (!(bin = driver_alloc_binary(olen))) {
 	    driver_send_error(iv, &am_enomem);
 	} else {
