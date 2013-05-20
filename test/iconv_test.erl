@@ -56,7 +56,7 @@ test_strings() ->
         [[X] || X <- Latin1Characters] ++
         [[X,Y] || X <- Latin1Characters, Y <- Latin1Characters] ++
         %% Random input:
-        [crypto:rand_bytes(X) || X <- lists:seq(1,200)].
+        [binary_to_list(crypto:rand_bytes(X)) || X <- lists:seq(1,200)].
 
 double_expand() ->
     {ok, CD} = iconv:open("utf-8", "ISO-8859-1"),
