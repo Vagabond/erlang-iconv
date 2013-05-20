@@ -176,9 +176,10 @@ static ErlDrvSSizeT driver_send_error(t_iconvdrv *iv, ErlDrvTermData *am)
 #define get_int16(s) ((((unsigned char*)  (s))[0] << 8) | \
                       (((unsigned char*)  (s))[1]))
 
-
-#define put_int16(i, s) {((unsigned char*)(s))[0] = ((i) >> 8) & 0xff; \
-                        ((unsigned char*)(s))[1] = (i)         & 0xff;}
+#define get_int32(s) ((((unsigned char*)  (s))[0] << 24) | \
+                      (((unsigned char*)  (s))[1] << 16) | \
+                      (((unsigned char*)  (s))[2] <<  8) | \
+                      (((unsigned char*)  (s))[3]))
 
 static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
 {
@@ -321,15 +322,15 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, ErlDrvSSizeT le
 
     case IV_CONV: {
 	/*
-	 * Format: <cd-len:16><cd><ignore><buf-len:16><buf>
+	 * Format: <cd-len:16><cd><ignore><buf-len:32><buf>
 	 */
 	i = get_int16(bp);
 	bp += 2;
 	memcpy(&cd, bp, i-1);
 	memcpy(&ignore, bp + i -1, 1);
 	bp += i;
-	i = get_int16(bp);
-	bp += 2;
+	i = get_int32(bp);
+	bp += 4;
 
 	iv_conv(iv, cd, bp, i, ignore);
 	break;

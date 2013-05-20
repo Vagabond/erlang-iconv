@@ -112,10 +112,10 @@ handle_call({open, To, From}, _, S) ->
 handle_call({conv, Cd, Buf}, _, S) ->
     CdLen  = byte_size(Cd),
     BufLen = byte_size(Buf),
-    if BufLen >= (1 bsl 16) ->
+    if BufLen >= (1 bsl 32) ->
             {reply, {error, {cannot_handle_large_input, BufLen}}, S};
        true ->
-            Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:16,Buf/binary>>,
+            Msg = <<?IV_CONV,CdLen:16,Cd/binary,BufLen:32,Buf/binary>>,
             Reply = call_drv(S#state.port, Msg),
             {reply, Reply, S}
     end;
