@@ -229,7 +229,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 
     if (!buf) {
 	driver_send_error(iv, &am_enomem);
-	return;
+        return;
     }
 
     op = buf;
@@ -249,9 +249,8 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	    /* allocate as much additional space as iconv says we need */
 	    newbuf = realloc(buf, newolen);
 	    if (!newbuf) {
-		free(buf); /* realloc failed, make sure we free the old buffer*/
 		driver_send_error(iv, &am_enomem);
-		return;
+		goto free_and_return;
 	    }
 	    op = newbuf + (op - buf);
 	    buf = newbuf;
@@ -262,7 +261,7 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	} else {
 	    driver_send_error(iv, &am_unknown);
 	}
-	return;
+        goto free_and_return;
     }
 
     if (ileft == 0) {
@@ -277,6 +276,9 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	}
     }
 
+free_and_return:
+    /* To ensure cleanup, this is the only exit point after an initial
+     * successful malloc. */
     free(buf);
 
     return;
