@@ -96,7 +96,6 @@ roundtrip(CS) ->
         [bytes_not_in(crypto:rand_bytes(X), IllegalBytes)
          || X <- lists:seq(1,200)],
 
-    io:format(user, "using ~p test strings\n", [length(TestStrings)]),
     {ok, CD1} = iconv:open("utf-8", CS),
     {ok, CD2} = iconv:open(CS, "utf-8"),
     [roundtrip(CD1, CD2, X) || X <- TestStrings],
