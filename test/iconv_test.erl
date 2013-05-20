@@ -9,6 +9,7 @@ iconv_test_() ->
      fun(_) -> iconv:stop() end,
      [
       {"Convert from latin-1 to utf-8", fun latin1_to_utf8/0}
+      , {"Double-expand corruption", fun double_expand/0}
       , {"Convert from utf-8 to latin-1 ", fun utf8_to_latin1/0}
       , {"Big test", fun bigtest/0}
       , {"Bad-input test", fun errortest/0}
@@ -56,6 +57,11 @@ test_strings() ->
         [[X,Y] || X <- Latin1Characters, Y <- Latin1Characters] ++
         %% Random input:
         [crypto:rand_bytes(X) || X <- lists:seq(1,200)].
+
+double_expand() ->
+    {ok, CD} = iconv:open("utf-8", "ISO-8859-1"),
+    latin1_to_utf8(CD, "Test æøå"),
+    iconv:close(CD).
 
 latin1_to_utf8() ->
     {ok, CD} = iconv:open("utf-8", "ISO-8859-1"),
