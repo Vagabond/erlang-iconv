@@ -176,9 +176,10 @@ static ErlDrvSSizeT driver_send_error(t_iconvdrv *iv, ErlDrvTermData *am)
 #define get_int16(s) ((((unsigned char*)  (s))[0] << 8) | \
                       (((unsigned char*)  (s))[1]))
 
-
-#define put_int16(i, s) {((unsigned char*)(s))[0] = ((i) >> 8) & 0xff; \
-                        ((unsigned char*)(s))[1] = (i)         & 0xff;}
+#define get_int32(s) ((((unsigned char*)  (s))[0] << 24) | \
+                      (((unsigned char*)  (s))[1] << 16) | \
+                      (((unsigned char*)  (s))[2] <<  8) | \
+                      (((unsigned char*)  (s))[3]))
 
 static void iv_open(t_iconvdrv *iv, char *tocode, char *fromcode)
 {
@@ -218,17 +219,17 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 {
     size_t oleft=ileft;
     char *op, *buf;
-    int olen = ileft + 1;
+    int olen = ileft;
     ErlDrvBinary *bin;
 
-    /* malloc enough for the input size +1 (null terminated),
+    /* malloc enough for the input size,
      * with the assumption that the output length will be close to the input
      * length. This isn't always the case, but we realloc on E2BIG below. */
     buf = malloc(olen);
 
     if (!buf) {
 	driver_send_error(iv, &am_enomem);
-	return;
+        return;
     }
 
     op = buf;
@@ -244,29 +245,28 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	    driver_send_error(iv, &am_einval);
 	} else if (errno == E2BIG) {
 	    char *newbuf;
+            int newolen = olen + ileft + oleft;
 	    /* allocate as much additional space as iconv says we need */
-	    newbuf = realloc(buf, olen + ileft + oleft);
+	    newbuf = realloc(buf, newolen);
 	    if (!newbuf) {
-		free(buf); /* realloc failed, make sure we free the old buffer*/
 		driver_send_error(iv, &am_enomem);
-		return;
+		goto free_and_return;
 	    }
+	    op = newbuf + (op - buf);
 	    buf = newbuf;
-	    op = buf + (olen - oleft - 1);
-	    olen += ileft + oleft;
-	    oleft += ileft;
+	    olen = newolen;
+	    oleft = olen - (op - buf);
 	    /* keep going */
 	    continue;
 	} else {
 	    driver_send_error(iv, &am_unknown);
 	}
-	return;
+        goto free_and_return;
     }
-    *(op++) = 0; /* ensure we null terminate */
 
     if (ileft == 0) {
-	/* find the length of the result, minus the terminating NULL */
-	olen = strlen(buf);
+	/* find the length of the result */
+	olen = op - buf;
 	if (!(bin = driver_alloc_binary(olen))) {
 	    driver_send_error(iv, &am_enomem);
 	} else {
@@ -276,6 +276,9 @@ static void iv_conv(t_iconvdrv *iv, iconv_t cd, char *ip, size_t ileft, char ign
 	}
     }
 
+free_and_return:
+    /* To ensure cleanup, this is the only exit point after an initial
+     * successful malloc. */
     free(buf);
 
     return;
@@ -321,15 +324,15 @@ static void iconvdrv_from_erlang(ErlDrvData drv_data, char *buf, ErlDrvSSizeT le
 
     case IV_CONV: {
 	/*
-	 * Format: <cd-len:16><cd><ignore><buf-len:16><buf>
+	 * Format: <cd-len:16><cd><ignore><buf-len:32><buf>
 	 */
 	i = get_int16(bp);
 	bp += 2;
 	memcpy(&cd, bp, i-1);
 	memcpy(&ignore, bp + i -1, 1);
 	bp += i;
-	i = get_int16(bp);
-	bp += 2;
+	i = get_int32(bp);
+	bp += 4;
 
 	iv_conv(iv, cd, bp, i, ignore);
 	break;
